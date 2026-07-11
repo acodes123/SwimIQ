@@ -8,7 +8,7 @@ import { computeScore } from '../utils/scoring'
 import { generateTips } from '../utils/tips'
 import { analyzeStrokeWithGemini } from '../utils/gemini'
 import { useAudioFeedback } from '../hooks/useAudioFeedback'
-import { Upload, Loader2, Play, RotateCcw, Volume2, VolumeX, Waves } from 'lucide-react'
+import { Upload, Loader2, Play, RotateCcw, Volume2, VolumeX, Waves, Link } from 'lucide-react'
 
 export default function VideoUpload() {
   const videoRef = useRef(null)
@@ -21,6 +21,8 @@ export default function VideoUpload() {
   const [tips, setTips] = useState([])
   const [progress, setProgress] = useState(0)
   const [statusText, setStatusText] = useState('')
+  const [youtubeUrl, setYoutubeUrl] = useState('')
+  const [isDownloading, setIsDownloading] = useState(false)
   const lastPoseRef = useRef(null)
   const { isEnabled: audioEnabled, setIsEnabled: setAudioEnabled, speakTips } =
     useAudioFeedback()
@@ -43,6 +45,36 @@ export default function VideoUpload() {
       console.warn('Upload save failed:', err)
     }
   }, [])
+
+  const handleYoutube = useCallback(async () => {
+    if (!youtubeUrl.trim()) return
+    setIsDownloading(true)
+    try {
+      const res = await fetch('/api/youtube', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: youtubeUrl.trim() }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        alert('Download failed: ' + (err.error || 'Unknown error'))
+        return
+      }
+      const blobRes = await fetch('/api/video-file?' + Date.now())
+      const blob = await blobRes.blob()
+      const url = URL.createObjectURL(blob)
+      setVideoSrc(url)
+      setIsProcessed(false)
+      setFinalScore(null)
+      setSnapshot(null)
+      setTips([])
+      setCurrentPose(null)
+    } catch (err) {
+      alert('Download failed: ' + err.message)
+    } finally {
+      setIsDownloading(false)
+    }
+  }, [youtubeUrl])
 
   const processVideo = useCallback(async () => {
     if (!videoRef.current) return
@@ -192,21 +224,47 @@ export default function VideoUpload() {
                   )}
                 </>
               ) : (
-                <label className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-800/50 transition-colors">
-                  <Upload className="w-16 h-16 text-slate-600 mb-4" />
-                  <h3 className="text-lg font-semibold text-slate-300 mb-1">
-                    Upload Swim Video
-                  </h3>
-                  <p className="text-slate-500 text-sm">
-                    MP4, MOV, or WebM
-                  </p>
-                  <input
-                    type="file"
-                    accept="video/*"
-                    onChange={handleUpload}
-                    className="hidden"
-                  />
-                </label>
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6">
+                  <label className="flex flex-col items-center justify-center w-full h-40 cursor-pointer border-2 border-dashed border-slate-600 rounded-xl hover:border-cyan-500/50 hover:bg-slate-800/50 transition-all">
+                    <Upload className="w-12 h-12 text-slate-600 mb-3" />
+                    <h3 className="text-lg font-semibold text-slate-300 mb-1">
+                      Upload Swim Video
+                    </h3>
+                    <p className="text-slate-500 text-sm">MP4, MOV, or WebM</p>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      onChange={handleUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  <div className="flex items-center gap-3 w-full max-w-md">
+                    <div className="flex-1 flex items-center gap-2 bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 focus-within:border-cyan-500/50 transition-colors">
+                      <Link className="w-4 h-4 text-slate-500 shrink-0" />
+                      <input
+                        type="url"
+                        placeholder="Paste YouTube URL..."
+                        value={youtubeUrl}
+                        onChange={(e) => setYoutubeUrl(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleYoutube()}
+                        className="bg-transparent text-sm text-slate-200 placeholder-slate-500 outline-none w-full"
+                      />
+                    </div>
+                    <button
+                      onClick={handleYoutube}
+                      disabled={!youtubeUrl.trim() || isDownloading}
+                      className="px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 rounded-xl text-sm font-semibold text-white hover:from-red-400 hover:to-red-500 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 shrink-0"
+                    >
+                      {isDownloading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Play className="w-4 h-4" />
+                      )}
+                      {isDownloading ? 'Downloading...' : 'Fetch'}
+                    </button>
+                  </div>
+                  <p className="text-slate-600 text-xs">or paste a YouTube link</p>
+                </div>
               )}
 
               {isProcessing && (
