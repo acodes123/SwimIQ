@@ -101,6 +101,20 @@ export default function ScorePanel({ score, snapshot }) {
           value={score.extension}
           color={score.extension >= 70 ? 'from-emerald-500 to-emerald-400' : score.extension >= 50 ? 'from-amber-500 to-orange-400' : 'from-red-500 to-red-400'}
         />
+        {snapshot && snapshot.bodyRotation != null && (
+          <MetricBar
+            label="Rotation"
+            value={snapshot.bodyRotation}
+            color={snapshot.bodyRotation >= 70 ? 'from-emerald-500 to-emerald-400' : snapshot.bodyRotation >= 50 ? 'from-amber-500 to-orange-400' : 'from-red-500 to-red-400'}
+          />
+        )}
+        {snapshot && snapshot.catchQuality != null && (
+          <MetricBar
+            label="Catch (EVF)"
+            value={snapshot.catchQuality}
+            color={snapshot.catchQuality >= 70 ? 'from-emerald-500 to-emerald-400' : snapshot.catchQuality >= 50 ? 'from-amber-500 to-orange-400' : 'from-red-500 to-red-400'}
+          />
+        )}
       </div>
 
       {snapshot && (

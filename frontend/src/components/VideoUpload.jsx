@@ -25,7 +25,7 @@ export default function VideoUpload() {
   const { isEnabled: audioEnabled, setIsEnabled: setAudioEnabled, speakTips } =
     useAudioFeedback()
 
-  const handleUpload = useCallback((e) => {
+  const handleUpload = useCallback(async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
     const url = URL.createObjectURL(file)
@@ -35,6 +35,13 @@ export default function VideoUpload() {
     setSnapshot(null)
     setTips([])
     setCurrentPose(null)
+    try {
+      const fd = new FormData()
+      fd.append('video', file)
+      await fetch('/api/upload', { method: 'POST', body: fd })
+    } catch (err) {
+      console.warn('Upload save failed:', err)
+    }
   }, [])
 
   const processVideo = useCallback(async () => {
@@ -89,6 +96,20 @@ export default function VideoUpload() {
     if (geminiResult && geminiResult.stroke && geminiResult.stroke !== 'Detecting...') {
       finalSnap.strokeType = geminiResult.stroke
       finalSnap.strokeConfidence = geminiResult.confidence || 85
+    } else if (finalSnap.strokeType === 'Detecting...' || finalSnap.strokeConfidence < 40) {
+      finalSnap.strokeType = 'Freestyle'
+      finalSnap.strokeConfidence = 50
+    }
+
+    if (geminiResult && geminiResult.metrics) {
+      const m = geminiResult.metrics
+      if (m.symmetry != null) finalSnap.symmetry = m.symmetry
+      if (m.extension != null) {
+        finalSnap.avgLeftExtension = m.extension
+        finalSnap.avgRightExtension = m.extension
+      }
+      if (m.rotation != null) finalSnap.bodyRotation = m.rotation
+      if (m.catchQuality != null) finalSnap.catchQuality = m.catchQuality
     }
 
     const score = computeScore(finalSnap)

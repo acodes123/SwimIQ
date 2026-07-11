@@ -109,7 +109,7 @@ class StrokeAnalyzer {
   }
 
   detectStrokeType() {
-    if (this.frameCount < 20) {
+    if (this.frameCount < 15) {
       this.detectedStroke = STROKE.UNKNOWN
       this.strokeConfidence = 0
       return
@@ -132,27 +132,39 @@ class StrokeAnalyzer {
     const normalizedShoulderRoll = shoulderRoll / wristRange
     const normalizedHipUndulation = hipUndulation / wristRange
 
+    const leftAmplitude = stddev(leftYs)
+    const rightAmplitude = stddev(rightYs)
+    const bothArmsActive = leftAmplitude > 5 && rightAmplitude > 5
+
     let stroke = STROKE.UNKNOWN
     let confidence = 0
 
-    if (corr < -0.3) {
+    if (corr < -0.4 && bothArmsActive) {
       if (noseAboveShoulders === true) {
         stroke = STROKE.BACKSTROKE
-        confidence = Math.min(100, Math.round(Math.abs(corr) * 80 + normalizedShoulderRoll * 30))
+        confidence = Math.min(100, Math.round(Math.abs(corr) * 70 + normalizedShoulderRoll * 30))
       } else {
         stroke = STROKE.FREESTYLE
-        confidence = Math.min(100, Math.round(Math.abs(corr) * 80 + normalizedShoulderRoll * 20))
+        confidence = Math.min(100, Math.round(Math.abs(corr) * 70 + normalizedShoulderRoll * 25 + (bothArmsActive ? 10 : 0)))
       }
-    } else if (corr > 0.3) {
-      if (normalizedHipUndulation > 0.4) {
+    } else if (corr > 0.3 && bothArmsActive) {
+      if (normalizedHipUndulation > 0.15 || hipUndulation > 15) {
         stroke = STROKE.BUTTERFLY
-        confidence = Math.min(100, Math.round(corr * 60 + normalizedHipUndulation * 50))
+        confidence = Math.min(100, Math.round(corr * 50 + normalizedHipUndulation * 50))
       } else {
         stroke = STROKE.BREASTSTROKE
-        confidence = Math.min(100, Math.round(corr * 60 + (1 - normalizedHipUndulation) * 40))
+        confidence = Math.min(100, Math.round(corr * 50 + (1 - normalizedHipUndulation) * 40))
+      }
+    } else if (corr < -0.2 && bothArmsActive) {
+      if (noseAboveShoulders === true) {
+        stroke = STROKE.BACKSTROKE
+        confidence = Math.min(80, Math.round(Math.abs(corr) * 60 + normalizedShoulderRoll * 20))
+      } else {
+        stroke = STROKE.FREESTYLE
+        confidence = Math.min(80, Math.round(Math.abs(corr) * 60 + normalizedShoulderRoll * 15))
       }
     } else {
-      confidence = Math.max(0, 30 - Math.abs(corr) * 50)
+      confidence = Math.max(0, 20 - Math.abs(corr) * 30)
     }
 
     if (confidence > this.strokeConfidence || stroke !== STROKE.UNKNOWN) {
@@ -248,7 +260,7 @@ console.log('=== SwimIQ Stroke Type Detection Test ===\n')
 
 const originalDateNow = Date.now
 
-function runTest(name, leftFn, rightFn, expectedStroke, frames = 120) {
+function runTest(name, leftFn, rightFn, expectedStroke, overrides = {}, frames = 120) {
   const analyzer = new StrokeAnalyzer()
   let fakeTime = Date.now()
   Date.now = () => fakeTime
@@ -257,15 +269,16 @@ function runTest(name, leftFn, rightFn, expectedStroke, frames = 120) {
     fakeTime += 33
     const leftWristY = leftFn(i, frames)
     const rightWristY = rightFn(i, frames)
-    analyzer.processFrame(createPose({
+    const poseOverrides = {
       leftWrist: { y: leftWristY },
       rightWrist: { y: rightWristY },
-      nose: { y: 80 },
-      leftShoulder: { y: 150 },
-      rightShoulder: { y: 150 },
-      leftHip: { y: 300 },
-      rightHip: { y: 300 },
-    }))
+      nose: { y: overrides.noseY || 80 },
+      leftShoulder: { y: overrides.shoulderY || 150 },
+      rightShoulder: { y: overrides.shoulderY || 150 },
+      leftHip: { y: overrides.hipYFn ? overrides.hipYFn(i) : 300 },
+      rightHip: { y: overrides.hipYFn ? overrides.hipYFn(i) : 300 },
+    }
+    analyzer.processFrame(createPose(poseOverrides))
   }
 
   Date.now = originalDateNow
@@ -283,7 +296,8 @@ allPass &= runTest(
   'Freestyle (alternating arms, face down)',
   (i) => 200 + Math.sin(i / 120 * Math.PI * 6) * 100,
   (i) => 200 + Math.sin(i / 120 * Math.PI * 6 + Math.PI) * 100,
-  'Freestyle'
+  'Freestyle',
+  { noseY: 250, shoulderY: 150 }
 )
 
 // Backstroke: arms alternate (anti-correlated), face up (nose Y < shoulder Y)
@@ -291,15 +305,17 @@ allPass &= runTest(
   'Backstroke (alternating arms, face up)',
   (i) => 200 + Math.sin(i / 120 * Math.PI * 6) * 100,
   (i) => 200 + Math.sin(i / 120 * Math.PI * 6 + Math.PI) * 100,
-  'Backstroke'
+  'Backstroke',
+  { noseY: 80, shoulderY: 150 }
 )
 
-// Breaststroke: arms together (correlated), low hip undulation
+// Breaststroke: arms together (correlated), flat body
 allPass &= runTest(
   'Breaststroke (arms together, flat body)',
   (i) => 200 + Math.sin(i / 120 * Math.PI * 6) * 80,
   (i) => 200 + Math.sin(i / 120 * Math.PI * 6) * 80,
-  'Breaststroke'
+  'Breaststroke',
+  { noseY: 250, shoulderY: 150, hipYFn: () => 300 }
 )
 
 // Butterfly: arms together (correlated), high hip undulation
@@ -307,7 +323,8 @@ allPass &= runTest(
   'Butterfly (arms together, undulating body)',
   (i) => 200 + Math.sin(i / 120 * Math.PI * 6) * 100,
   (i) => 200 + Math.sin(i / 120 * Math.PI * 6) * 100,
-  'Butterfly'
+  'Butterfly',
+  { noseY: 250, shoulderY: 150, hipYFn: (i) => 300 + Math.sin(i / 120 * Math.PI * 4) * 40 }
 )
 
 console.log(`\n${allPass ? 'ALL TESTS PASSED' : 'SOME TESTS FAILED'}`)

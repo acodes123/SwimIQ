@@ -152,7 +152,7 @@ export class StrokeAnalyzer {
   }
 
   detectStrokeType() {
-    if (this.frameCount < 20) {
+    if (this.frameCount < 15) {
       this.detectedStroke = STROKE.UNKNOWN
       this.strokeConfidence = 0
       return
@@ -178,27 +178,39 @@ export class StrokeAnalyzer {
     const normalizedShoulderRoll = shoulderRoll / wristRange
     const normalizedHipUndulation = hipUndulation / wristRange
 
+    const leftAmplitude = stddev(leftYs)
+    const rightAmplitude = stddev(rightYs)
+    const bothArmsActive = leftAmplitude > 5 && rightAmplitude > 5
+
     let stroke = STROKE.UNKNOWN
     let confidence = 0
 
-    if (corr < -0.3) {
+    if (corr < -0.4 && bothArmsActive) {
       if (noseAboveShoulders === true) {
         stroke = STROKE.BACKSTROKE
-        confidence = Math.min(100, Math.round(Math.abs(corr) * 80 + normalizedShoulderRoll * 30))
+        confidence = Math.min(100, Math.round(Math.abs(corr) * 70 + normalizedShoulderRoll * 30))
       } else {
         stroke = STROKE.FREESTYLE
-        confidence = Math.min(100, Math.round(Math.abs(corr) * 80 + normalizedShoulderRoll * 20))
+        confidence = Math.min(100, Math.round(Math.abs(corr) * 70 + normalizedShoulderRoll * 25 + (bothArmsActive ? 10 : 0)))
       }
-    } else if (corr > 0.3) {
-      if (normalizedHipUndulation > 0.4) {
+    } else if (corr > 0.3 && bothArmsActive) {
+      if (normalizedHipUndulation > 0.15 || hipUndulation > 15) {
         stroke = STROKE.BUTTERFLY
-        confidence = Math.min(100, Math.round(corr * 60 + normalizedHipUndulation * 50))
+        confidence = Math.min(100, Math.round(corr * 50 + normalizedHipUndulation * 50))
       } else {
         stroke = STROKE.BREASTSTROKE
-        confidence = Math.min(100, Math.round(corr * 60 + (1 - normalizedHipUndulation) * 40))
+        confidence = Math.min(100, Math.round(corr * 50 + (1 - normalizedHipUndulation) * 40))
+      }
+    } else if (corr < -0.2 && bothArmsActive) {
+      if (noseAboveShoulders === true) {
+        stroke = STROKE.BACKSTROKE
+        confidence = Math.min(80, Math.round(Math.abs(corr) * 60 + normalizedShoulderRoll * 20))
+      } else {
+        stroke = STROKE.FREESTYLE
+        confidence = Math.min(80, Math.round(Math.abs(corr) * 60 + normalizedShoulderRoll * 15))
       }
     } else {
-      confidence = Math.max(0, 30 - Math.abs(corr) * 50)
+      confidence = Math.max(0, 20 - Math.abs(corr) * 30)
     }
 
     if (confidence > this.strokeConfidence || stroke !== STROKE.UNKNOWN) {
