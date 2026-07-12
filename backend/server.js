@@ -3,16 +3,21 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import multer from 'multer'
 import { renameSync, mkdirSync, existsSync, unlinkSync, createReadStream } from 'fs'
-import { join, extname } from 'path'
+import { join, extname, dirname } from 'path'
+import { fileURLToPath } from 'url'
 import { execFileSync } from 'child_process'
 
-dotenv.config()
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+dotenv.config({ path: join(__dirname, '.env') })
 
 const app = express()
 app.use(cors())
 app.use(express.json({ limit: '50mb' }))
 
-const UPLOAD_DIR = join(process.cwd(), '..', 'uploads')
+// Anchored to this file so the server works regardless of the cwd it was
+// started from (e.g. `node backend/server.js` from the repo root).
+const UPLOAD_DIR = join(__dirname, '..', 'uploads')
 if (!existsSync(UPLOAD_DIR)) mkdirSync(UPLOAD_DIR, { recursive: true })
 const upload = multer({ dest: UPLOAD_DIR, limits: { fileSize: 200 * 1024 * 1024 } })
 

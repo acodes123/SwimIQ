@@ -22,4 +22,21 @@ export default defineConfig({
       '@tensorflow/tfjs-converter',
     ],
   },
+  build: {
+    // TF.js is unavoidably large; keep it in its own cacheable chunk and
+    // raise the warning limit so builds stay clean.
+    chunkSizeWarningLimit: 1600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          tfjs: [
+            '@tensorflow/tfjs-core',
+            '@tensorflow/tfjs-backend-webgl',
+            '@tensorflow/tfjs-converter',
+          ],
+          react: ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
+    },
+  },
 })

@@ -61,6 +61,9 @@ export default function LiveDemo() {
       stream.getTracks().forEach(t => t.stop())
       setStream(null)
     }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
     stopDetection()
     stopAudio()
     setIsActive(false)

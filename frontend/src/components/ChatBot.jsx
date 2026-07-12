@@ -20,7 +20,7 @@ function MessageBubble({ role, content }) {
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
-        className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+        className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
           isUser
             ? 'rounded-br-md bg-gradient-to-r from-cyan-500 to-blue-500 text-white'
             : 'rounded-bl-md bg-[#1a1f2e] text-slate-200'
@@ -120,7 +120,7 @@ export default function ChatBot({ context }) {
   return (
     <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
       {isOpen && (
-        <div className="flex h-[480px] w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0a0f1a] shadow-2xl shadow-black/50 animate-chat-in">
+        <div className="flex h-[min(480px,calc(100dvh-7rem))] w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0a0f1a] shadow-2xl shadow-black/50 animate-chat-in">
 
           <div className="flex items-center justify-between border-b border-white/[0.06] bg-white/[0.02] px-4 py-3">
             <div className="flex items-center gap-2.5">

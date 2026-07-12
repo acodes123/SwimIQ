@@ -355,7 +355,9 @@ export class StrokeAnalyzer {
       }
     }
 
-    let consistency = 100
+    // Neutral until we have enough strokes to actually measure timing;
+    // defaulting to 100 would inflate scores when nothing was detected.
+    let consistency = 50
     if (recentStrokes.length >= 3) {
       const durations = recentStrokes.map(s => s.duration)
       const mean = durations.reduce((a, b) => a + b, 0) / durations.length

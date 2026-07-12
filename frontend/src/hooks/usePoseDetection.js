@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { initMoveNet, detectPose, cleanup } from '../utils/movenet'
+import { initMoveNet, detectPose } from '../utils/movenet'
 import { StrokeAnalyzer } from '../utils/swimmingAnalysis'
 import { computeScore } from '../utils/scoring'
 
@@ -15,24 +15,6 @@ export function usePoseDetection(videoRef, isActive) {
   const analyzerRef = useRef(new StrokeAnalyzer())
 
   isActiveRef.current = isActive
-
-  const startDetection = useCallback(async () => {
-    if (!videoRef.current || !isActiveRef.current) return
-
-    setIsLoading(true)
-    setError(null)
-    try {
-      await initMoveNet()
-      setIsModelLoaded(true)
-      setIsLoading(false)
-      analyzerRef.current.reset()
-      runLoop()
-    } catch (err) {
-      console.error('Failed to init MoveNet:', err)
-      setError(err.message || 'Failed to load AI model')
-      setIsLoading(false)
-    }
-  }, [videoRef])
 
   const runLoop = useCallback(async () => {
     if (!isActiveRef.current) return
@@ -54,6 +36,24 @@ export function usePoseDetection(videoRef, isActive) {
     }
   }, [videoRef])
 
+  const startDetection = useCallback(async () => {
+    if (!videoRef.current || !isActiveRef.current) return
+
+    setIsLoading(true)
+    setError(null)
+    try {
+      await initMoveNet()
+      setIsModelLoaded(true)
+      setIsLoading(false)
+      analyzerRef.current.reset()
+      runLoop()
+    } catch (err) {
+      console.error('Failed to init MoveNet:', err)
+      setError(err.message || 'Failed to load AI model')
+      setIsLoading(false)
+    }
+  }, [videoRef, runLoop])
+
   useEffect(() => {
     if (isActive) {
       const timer = setTimeout(() => startDetection(), 100)
@@ -72,7 +72,8 @@ export function usePoseDetection(videoRef, isActive) {
       clearTimeout(frameRef.current)
       frameRef.current = null
     }
-    cleanup()
+    // Keep the MoveNet model loaded — disposing it here would force a full
+    // reload (and WebGL context churn) every time the camera is restarted.
     setIsModelLoaded(false)
     setPose(null)
     setSnapshot(null)

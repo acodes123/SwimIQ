@@ -33,6 +33,13 @@ export default function VideoUpload() {
   const { isEnabled: audioEnabled, setIsEnabled: setAudioEnabled, speakTips } =
     useAudioFeedback()
 
+  const setVideoUrl = useCallback((url) => {
+    setVideoSrc(prev => {
+      if (prev) URL.revokeObjectURL(prev)
+      return url
+    })
+  }, [])
+
   const resetAnalysisState = useCallback(() => {
     setIsProcessed(false)
     setFinalScore(null)
@@ -48,8 +55,7 @@ export default function VideoUpload() {
   const handleUpload = useCallback(async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const url = URL.createObjectURL(file)
-    setVideoSrc(url)
+    setVideoUrl(URL.createObjectURL(file))
     resetAnalysisState()
     try {
       const fd = new FormData()
@@ -59,7 +65,7 @@ export default function VideoUpload() {
       // Server-side copy is optional; analysis runs fully client-side.
       console.warn('Upload save failed:', err)
     }
-  }, [resetAnalysisState])
+  }, [setVideoUrl, resetAnalysisState])
 
   const handleYoutube = useCallback(async () => {
     if (!youtubeUrl.trim() || isDownloading) return
@@ -86,14 +92,14 @@ export default function VideoUpload() {
         return
       }
       const blob = await blobRes.blob()
-      setVideoSrc(URL.createObjectURL(blob))
+      setVideoUrl(URL.createObjectURL(blob))
       resetAnalysisState()
     } catch (err) {
       setErrorText('Download failed: ' + err.message)
     } finally {
       setIsDownloading(false)
     }
-  }, [youtubeUrl, isDownloading, resetAnalysisState])
+  }, [youtubeUrl, isDownloading, setVideoUrl, resetAnalysisState])
 
   const processVideo = useCallback(async () => {
     const video = videoRef.current
@@ -231,13 +237,13 @@ export default function VideoUpload() {
   }, [audioEnabled, speakTips, isProcessing])
 
   const reset = useCallback(() => {
-    setVideoSrc(null)
+    setVideoUrl(null)
     resetAnalysisState()
     if (videoRef.current) {
       videoRef.current.pause()
       videoRef.current.currentTime = 0
     }
-  }, [resetAnalysisState])
+  }, [setVideoUrl, resetAnalysisState])
 
   return (
     <div className="min-h-screen bg-[#030712]">
