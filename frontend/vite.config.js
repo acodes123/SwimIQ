@@ -28,13 +28,9 @@ export default defineConfig({
     chunkSizeWarningLimit: 1600,
     rollupOptions: {
       output: {
-        manualChunks: {
-          tfjs: [
-            '@tensorflow/tfjs-core',
-            '@tensorflow/tfjs-backend-webgl',
-            '@tensorflow/tfjs-converter',
-          ],
-          react: ['react', 'react-dom', 'react-router-dom'],
+        manualChunks(id) {
+          if (id.includes('@tensorflow')) return 'tfjs'
+          if (id.includes('react')) return 'react'
         },
       },
     },

@@ -72,13 +72,7 @@ export function usePoseDetection(videoRef, isActive) {
       clearTimeout(frameRef.current)
       frameRef.current = null
     }
-    // Keep the MoveNet model loaded — disposing it here would force a full
-    // reload (and WebGL context churn) every time the camera is restarted.
-    setIsModelLoaded(false)
     setPose(null)
-    setSnapshot(null)
-    setScore(null)
-    analyzerRef.current.reset()
   }, [])
 
   return {

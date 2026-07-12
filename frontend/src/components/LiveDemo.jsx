@@ -128,7 +128,7 @@ export default function LiveDemo() {
                 />
               )}
 
-              {!isActive && (
+              {!isActive && !snapshot && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#030712]/95 p-6">
                   <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-500/10">
                     <Waves className="h-8 w-8 text-cyan-400 animate-wave" />
@@ -160,6 +160,18 @@ export default function LiveDemo() {
                       Start Analysis
                     </button>
                   )}
+                </div>
+              )}
+
+              {!isActive && snapshot && (
+                <div className="absolute inset-0 flex flex-col items-center justify-end bg-gradient-to-t from-[#030712]/80 via-transparent to-transparent p-6">
+                  <button
+                    onClick={startCamera}
+                    className="flex items-center gap-2 rounded-xl bg-cyan-500 px-6 py-3 font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all hover:bg-cyan-400"
+                  >
+                    <Camera className="h-4 w-4" />
+                    Start New Analysis
+                  </button>
                 </div>
               )}
 
