@@ -365,10 +365,6 @@ app.post('/api/chat', async (req, res) => {
 })
 
 const PORT = process.env.PORT || 3002
-if (!process.env.VERCEL) {
-  app.listen(PORT, () => {
-    console.log(`SwimIQ backend running on port ${PORT}`)
-  })
-}
-
-export default app
+app.listen(PORT, () => {
+  console.log(`SwimIQ backend running on port ${PORT}`)
+})
