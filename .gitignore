@@ -4,3 +4,7 @@ dist/
 .env.*
 *.log
 .vite/
+uploads/
+*.mp4
+*.webm
+*.mov

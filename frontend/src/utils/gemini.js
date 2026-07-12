@@ -123,7 +123,8 @@ export async function analyzeStrokeWithGemini(videoElement, duration) {
   const timeout = setTimeout(() => controller.abort(), 45000)
   let res
   try {
-    res = await fetch('/api/analyze-stroke', {
+    const apiBase = import.meta.env.VITE_API_URL || ''
+    res = await fetch(`${apiBase}/api/analyze-stroke`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ frames }),

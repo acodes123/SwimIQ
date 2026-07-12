@@ -37,10 +37,10 @@ function WaveBackground() {
 
 export default function Landing() {
   return (
-    <div className="min-h-screen overflow-hidden bg-[#030712]">
+    <div className="min-h-screen overflow-hidden bg-[#030712] flex flex-col items-center">
 
       {/* ===== Hero: fills the viewport ===== */}
-      <section className="relative flex min-h-screen flex-col">
+      <section className="relative flex min-h-screen w-full flex-col">
         <WaveBackground />
 
         <nav className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-6 sm:px-6 lg:px-8">
@@ -106,7 +106,7 @@ export default function Landing() {
       </section>
 
       {/* ===== Features ===== */}
-      <section className="relative mx-auto max-w-7xl px-4 py-28 sm:px-6 lg:px-8">
+      <section className="relative mx-auto w-full max-w-7xl px-4 py-28 sm:px-6 lg:px-8">
         <div className="mb-16 text-center">
           <h2 className="mb-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
             Coaching-grade analysis, no coach required
@@ -136,7 +136,7 @@ export default function Landing() {
       </section>
 
       {/* ===== How It Works ===== */}
-      <section className="mx-auto max-w-7xl px-4 pb-28 sm:px-6 lg:px-8">
+      <section className="mx-auto w-full max-w-7xl px-4 pb-28 sm:px-6 lg:px-8">
         <div className="rounded-3xl border border-white/[0.06] bg-white/[0.015] p-10 sm:p-14">
           <div className="mb-14 text-center">
             <h2 className="mb-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">How it works</h2>

@@ -78,7 +78,8 @@ export default function ChatBot({ context }) {
       const timeout = setTimeout(() => controller.abort(), 20000)
       let res
       try {
-        res = await fetch('/api/chat', {
+        const apiBase = import.meta.env.VITE_API_URL || ''
+        res = await fetch(`${apiBase}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

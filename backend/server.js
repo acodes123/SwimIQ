@@ -12,7 +12,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 dotenv.config({ path: join(__dirname, '.env') })
 
 const app = express()
-app.use(cors())
+app.use(cors({ origin: true, credentials: true }))
 app.use(express.json({ limit: '50mb' }))
 
 // Anchored to this file so the server works regardless of the cwd it was
@@ -364,7 +364,11 @@ app.post('/api/chat', async (req, res) => {
   }
 })
 
-const PORT = 3002
-app.listen(PORT, () => {
-  console.log(`SwimIQ backend running on port ${PORT}`)
-})
+const PORT = process.env.PORT || 3002
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`SwimIQ backend running on port ${PORT}`)
+  })
+}
+
+export default app
