@@ -69,7 +69,9 @@ function normalizeResult(data) {
 
 export async function analyzeStrokeWithGemini(videoElement, duration) {
   const canvas = document.createElement('canvas')
-  const ctx = canvas.getContext('2d')
+  // willReadFrequently keeps repeated getImageData calls on the CPU path
+  // (the motion probe reads pixels ~20 times).
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
   canvas.width = 640
   canvas.height = 360
 

@@ -52,27 +52,22 @@ export default function VideoUpload() {
     lastPoseRef.current = null
   }, [])
 
-  const handleUpload = useCallback(async (e) => {
+  // Analysis runs fully client-side — the file never needs to reach a
+  // server (hosted platforms also cap request bodies well below video size).
+  const handleUpload = useCallback((e) => {
     const file = e.target.files?.[0]
     if (!file) return
     setVideoUrl(URL.createObjectURL(file))
     resetAnalysisState()
-    try {
-      const fd = new FormData()
-      fd.append('video', file)
-      await fetch('/api/upload', { method: 'POST', body: fd })
-    } catch (err) {
-      // Server-side copy is optional; analysis runs fully client-side.
-      console.warn('Upload save failed:', err)
-    }
   }, [setVideoUrl, resetAnalysisState])
 
   const handleYoutube = useCallback(async () => {
     if (!youtubeUrl.trim() || isDownloading) return
     setIsDownloading(true)
     setErrorText('')
+    const apiBase = import.meta.env.VITE_API_URL || ''
     try {
-      const res = await fetch('/api/youtube', {
+      const res = await fetch(`${apiBase}/api/youtube`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: youtubeUrl.trim() }),
@@ -86,7 +81,7 @@ export default function VideoUpload() {
         setErrorText('Download failed: ' + message)
         return
       }
-      const blobRes = await fetch('/api/video-file?' + Date.now())
+      const blobRes = await fetch(`${apiBase}/api/video-file?` + Date.now())
       if (!blobRes.ok) {
         setErrorText('Could not load downloaded video.')
         return
