@@ -120,7 +120,7 @@ export default function Landing() {
           <FeatureCard
             icon={<Camera className="h-6 w-6" />}
             title="Poolside Cameras"
-            description="Two cameras at lane ends capture your full stroke from stable angles — nothing to wear in the water."
+            description="Cameras at lane ends capture your full stroke from stable angles — nothing to wear in the water."
           />
           <FeatureCard
             icon={<BarChart3 className="h-6 w-6" />}
