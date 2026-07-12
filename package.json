@@ -2,6 +2,16 @@
   "name": "swimiq",
   "private": true,
   "type": "module",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "start": "node backend/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "multer": "^2.2.0"
+  },
   "engines": {
     "node": ">=18"
   }
