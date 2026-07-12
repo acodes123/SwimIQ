@@ -4,7 +4,7 @@ import dotenv from 'dotenv'
 import multer from 'multer'
 import { renameSync, mkdirSync, existsSync, unlinkSync, createReadStream } from 'fs'
 import { join, extname } from 'path'
-import { execSync } from 'child_process'
+import { execFileSync } from 'child_process'
 
 dotenv.config()
 
@@ -44,13 +44,29 @@ app.get('/api/video-file', (req, res) => {
 app.post('/api/youtube', async (req, res) => {
   try {
     const { url } = req.body
-    if (!url) return res.status(400).json({ error: 'No URL provided' })
+    if (!url || typeof url !== 'string') return res.status(400).json({ error: 'No URL provided' })
+
+    let parsedUrl
+    try {
+      parsedUrl = new URL(url)
+    } catch {
+      return res.status(400).json({ error: 'Invalid URL' })
+    }
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      return res.status(400).json({ error: 'Invalid URL' })
+    }
 
     const dest = join(UPLOAD_DIR, 'youtube_upload.mp4')
     if (existsSync(dest)) unlinkSync(dest)
 
-    execSync(
-      `yt-dlp -f "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best" --merge-output-format mp4 -o "${dest}" "${url}"`,
+    execFileSync(
+      'yt-dlp',
+      [
+        '-f', 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best',
+        '--merge-output-format', 'mp4',
+        '-o', dest,
+        parsedUrl.href,
+      ],
       { timeout: 120000, stdio: 'pipe' }
     )
 
@@ -126,10 +142,59 @@ METRICS GUIDE:
 - rotation: Body roll along long axis. 100 = strong 45-60 degree shoulder roll synchronized with the catch. 75 = good rotation. 50 = moderate. Below 50 = flat swimming.
 - catchQuality: EVF execution. 100 = textbook high elbow, forearm vertical early in the catch. 75 = good catch with minor drops. 50 = moderate, some elbow drop. Below 50 = severe dropped elbow, arm pulling with locked straight arm.`.trim()
 
+const VALID_STROKES = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly']
+const clamp = (v, min = 0, max = 100) => Math.max(min, Math.min(max, Number(v) || 0))
+
+function extractJson(text) {
+  const codeBlock = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  const raw = codeBlock ? codeBlock[1] : text
+
+  const braceStart = raw.indexOf('{')
+  if (braceStart === -1) return null
+
+  let depth = 0
+  let end = -1
+  for (let i = braceStart; i < raw.length; i++) {
+    if (raw[i] === '{') depth++
+    if (raw[i] === '}') depth--
+    if (depth === 0) { end = i; break }
+  }
+  if (end === -1) return null
+
+  try {
+    return JSON.parse(raw.slice(braceStart, end + 1))
+  } catch {
+    console.warn('JSON parse failed, raw:', raw.slice(braceStart, end + 1))
+    return null
+  }
+}
+
+function normalizeAnalysis(parsed) {
+  if (!parsed || typeof parsed !== 'object') return null
+  if (!VALID_STROKES.includes(parsed.stroke)) return null
+
+  const result = {
+    stroke: parsed.stroke,
+    confidence: clamp(parsed.confidence ?? 75),
+    feedback: typeof parsed.feedback === 'string' ? parsed.feedback.trim() : '',
+  }
+
+  if (parsed.metrics && typeof parsed.metrics === 'object') {
+    const m = parsed.metrics
+    result.metrics = {}
+    if (m.symmetry != null) result.metrics.symmetry = clamp(m.symmetry)
+    if (m.extension != null) result.metrics.extension = clamp(m.extension)
+    if (m.rotation != null) result.metrics.rotation = clamp(m.rotation)
+    if (m.catchQuality != null) result.metrics.catchQuality = clamp(m.catchQuality)
+  }
+
+  return result
+}
+
 app.post('/api/analyze-stroke', async (req, res) => {
   try {
     const { frames } = req.body
-    if (!frames || frames.length === 0) {
+    if (!Array.isArray(frames) || frames.length === 0) {
       return res.status(400).json({ error: 'No frames provided' })
     }
 
@@ -151,64 +216,56 @@ app.post('/api/analyze-stroke', async (req, res) => {
       })
     }
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GROQ_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-        messages: [{ role: 'user', content }],
-        max_tokens: 512,
-        temperature: 0.3,
-      }),
-    })
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 40000)
+    let response
+    try {
+      response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          messages: [{ role: 'user', content }],
+          max_tokens: 512,
+          temperature: 0.3,
+        }),
+        signal: controller.signal,
+      })
+    } finally {
+      clearTimeout(timeout)
+    }
 
-    const data = await response.json()
+    let data
+    try {
+      data = await response.json()
+    } catch {
+      return res.status(502).json({ error: `Groq API returned invalid response (HTTP ${response.status})` })
+    }
 
-    if (data.error) {
-      console.error('Groq error:', data.error)
-      return res.status(500).json({ error: data.error.message || JSON.stringify(data.error) })
+    if (!response.ok || data.error) {
+      console.error('Groq error:', data.error || response.status)
+      return res.status(502).json({ error: data.error?.message || `Groq API error (HTTP ${response.status})` })
     }
 
     const text = data.choices?.[0]?.message?.content || ''
+    const normalized = normalizeAnalysis(extractJson(text))
 
-    let parsed = null
-
-    const codeBlock = text.match(/```(?:json)?\s*([\s\S]*?)```/)
-    const raw = codeBlock ? codeBlock[1] : text
-
-    const braceStart = raw.indexOf('{')
-    if (braceStart !== -1) {
-      let depth = 0
-      let end = -1
-      for (let i = braceStart; i < raw.length; i++) {
-        if (raw[i] === '{') depth++
-        if (raw[i] === '}') depth--
-        if (depth === 0) { end = i; break }
-      }
-      if (end !== -1) {
-        try {
-          parsed = JSON.parse(raw.slice(braceStart, end + 1))
-        } catch (e) {
-          console.warn('JSON parse failed, raw:', raw.slice(braceStart, end + 1))
-        }
-      }
-    }
-
-    if (parsed) {
-      return res.json(parsed)
+    if (normalized) {
+      return res.json(normalized)
     }
 
     return res.json({
       stroke: 'Detecting...',
       confidence: 0,
-      feedback: text || 'Could not analyze stroke from video.',
+      feedback: text.slice(0, 300) || 'Could not analyze stroke from video.',
     })
   } catch (err) {
     console.error('Server error:', err)
-    res.status(500).json({ error: err.message })
+    const message = err.name === 'AbortError' ? 'Groq API request timed out' : err.message
+    res.status(500).json({ error: message })
   }
 })
 

@@ -1,115 +1,128 @@
-import { Waves, Camera, Upload, Headphones, BarChart3, ArrowRight } from 'lucide-react'
+import { Waves, Camera, Upload, Headphones, BarChart3, ArrowRight, Play } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden">
-      <nav className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+    <div className="min-h-screen overflow-hidden bg-[#030712]">
+
+      <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/25">
-            <Waves className="w-6 h-6 text-white" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 shadow-lg shadow-cyan-500/25">
+            <Waves className="h-5 w-5 text-white" />
           </div>
           <span className="text-xl font-bold text-white">SwimIQ</span>
         </div>
-        <div className="flex gap-3">
-          <Link
-            to="/demo"
-            className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl font-semibold text-white hover:from-cyan-400 hover:to-blue-400 transition-all shadow-lg shadow-cyan-500/20 text-sm"
-          >
-            Live Demo
-          </Link>
+        <div className="flex items-center gap-3">
           <Link
             to="/upload"
-            className="px-5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl font-medium text-slate-300 hover:bg-slate-700 transition-all text-sm"
+            className="hidden rounded-xl px-4 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:text-white sm:block"
           >
             Upload Video
+          </Link>
+          <Link
+            to="/demo"
+            className="rounded-xl bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-500/20 transition-all hover:bg-cyan-400"
+          >
+            Live Demo
           </Link>
         </div>
       </nav>
 
-      <section className="max-w-6xl mx-auto px-6 pt-20 pb-32 text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium mb-8">
-          <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
-          AI-Powered Swimming Coach
-        </div>
+      <section className="relative mx-auto max-w-7xl px-4 pb-28 pt-16 text-center sm:px-6 sm:pt-24 lg:px-8">
+        <div
+          className="pointer-events-none absolute left-1/2 top-0 h-[500px] w-[800px] -translate-x-1/2 rounded-full opacity-20 blur-3xl"
+          style={{ background: 'radial-gradient(ellipse at center, #06b6d4 0%, transparent 60%)' }}
+        />
 
-        <h1 className="text-5xl md:text-7xl font-black text-white mb-6 leading-tight">
-          Real-time form analysis.
-          <br />
-          <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-300 bg-clip-text text-transparent">
-            Instant coaching feedback.
-          </span>
-        </h1>
+        <div className="relative">
+          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/[0.07] px-4 py-1.5 text-sm font-medium text-cyan-400">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-400" />
+            AI-Powered Swimming Coach
+          </div>
 
-        <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-          SwimIQ uses computer vision and AI to analyze your swimming stroke in real-time.
-          Poolside cameras track your form. Your phone delivers audio coaching through headphones — while you swim.
-        </p>
+          <h1 className="mx-auto mb-6 max-w-4xl text-4xl font-black leading-[1.1] tracking-tight text-white sm:text-6xl lg:text-7xl">
+            Your swim coach,
+            <br />
+            <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-300 bg-clip-text text-transparent">
+              powered by computer vision.
+            </span>
+          </h1>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-20">
-          <Link
-            to="/demo"
-            className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-2xl font-bold text-white text-lg hover:from-cyan-400 hover:to-blue-400 transition-all shadow-xl shadow-cyan-500/25 animate-pulse-glow flex items-center justify-center gap-2"
-          >
-            Start Live Demo
-            <ArrowRight className="w-5 h-5" />
-          </Link>
-          <Link
-            to="/upload"
-            className="px-8 py-4 bg-slate-800/50 border border-slate-700 rounded-2xl font-semibold text-slate-300 text-lg hover:bg-slate-700/50 transition-all flex items-center justify-center gap-2"
-          >
-            <Upload className="w-5 h-5" />
-            Upload a Video
-          </Link>
-        </div>
+          <p className="mx-auto mb-12 max-w-2xl text-base leading-relaxed text-slate-400 sm:text-lg">
+            SwimIQ analyzes your stroke in real time with poolside cameras and AI pose
+            detection — then coaches you through your headphones while you swim.
+            No goggles. No guesswork.
+          </p>
 
-        <div className="relative max-w-4xl mx-auto">
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/10 to-cyan-500/20 blur-3xl rounded-full" />
-          <div className="relative bg-slate-900/80 border border-slate-700/50 rounded-3xl p-8 backdrop-blur-sm">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <FeatureCard
-                icon={<Camera className="w-8 h-8" />}
-                title="Poolside Cameras"
-                description="Two cameras at lane ends capture your full stroke from stable angles"
-              />
-              <FeatureCard
-                icon={<BarChart3 className="w-8 h-8" />}
-                title="AI Pose Analysis"
-                description="MoveNet tracks 17 body keypoints. Analyzes symmetry, extension, alignment"
-              />
-              <FeatureCard
-                icon={<Headphones className="w-8 h-8" />}
-                title="Live Audio Coaching"
-                description="Bone conduction headphones deliver instant form corrections while you swim"
-              />
-            </div>
+          <div className="mb-24 flex flex-col justify-center gap-4 sm:flex-row">
+            <Link
+              to="/demo"
+              className="flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-8 py-4 text-base font-bold text-white shadow-xl shadow-cyan-500/25 transition-all hover:bg-cyan-400 animate-pulse-glow"
+            >
+              <Play className="h-5 w-5" />
+              Start Live Demo
+            </Link>
+            <Link
+              to="/upload"
+              className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-8 py-4 text-base font-semibold text-slate-300 transition-all hover:border-white/25 hover:text-white"
+            >
+              <Upload className="h-5 w-5" />
+              Upload a Video
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            <FeatureCard
+              icon={<Camera className="h-6 w-6" />}
+              title="Poolside Cameras"
+              description="Two cameras at lane ends capture your full stroke from stable angles — no wearables in the water."
+            />
+            <FeatureCard
+              icon={<BarChart3 className="h-6 w-6" />}
+              title="AI Pose Analysis"
+              description="MoveNet tracks 17 body keypoints per frame, scoring symmetry, extension, and stroke consistency."
+            />
+            <FeatureCard
+              icon={<Headphones className="h-6 w-6" />}
+              title="Live Audio Coaching"
+              description="Bone-conduction headphones deliver instant form corrections mid-lap, while you swim."
+            />
           </div>
         </div>
       </section>
 
-      <section className="max-w-6xl mx-auto px-6 pb-24">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-white mb-3">How It Works</h2>
-          <p className="text-slate-400">From water to insight in milliseconds</p>
+      <section className="mx-auto max-w-7xl px-4 pb-28 sm:px-6 lg:px-8">
+        <div className="mb-16 text-center">
+          <h2 className="mb-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">How it works</h2>
+          <p className="text-slate-500">From water to insight in milliseconds</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { step: '01', title: 'Poolside Camera', desc: 'Captures swimmer from both lane ends' },
-            { step: '02', title: 'MoveNet AI', desc: 'Detects 17 body keypoints in real-time' },
-            { step: '03', title: 'Form Analysis', desc: 'Computes symmetry, extension, alignment' },
-            { step: '04', title: 'Audio Feedback', desc: 'Coaching tips delivered through headphones' },
-          ].map((item) => (
-            <div key={item.step} className="text-center">
-              <div className="text-5xl font-black text-cyan-500/20 mb-3">{item.step}</div>
-              <h3 className="text-lg font-semibold text-white mb-1">{item.title}</h3>
-              <p className="text-sm text-slate-400">{item.desc}</p>
+            { step: '01', title: 'Capture', desc: 'Poolside cameras record the swimmer from both lane ends' },
+            { step: '02', title: 'Detect', desc: 'MoveNet AI tracks 17 body keypoints in real time' },
+            { step: '03', title: 'Analyze', desc: 'Form engine scores symmetry, extension, and timing' },
+            { step: '04', title: 'Coach', desc: 'Audio tips delivered through headphones as you swim' },
+          ].map((item, i) => (
+            <div key={item.step} className="relative text-center">
+              <div className="mb-4 text-5xl font-black text-cyan-500/15">{item.step}</div>
+              <h3 className="mb-2 text-lg font-semibold text-white">{item.title}</h3>
+              <p className="mx-auto max-w-[220px] text-sm leading-relaxed text-slate-500">{item.desc}</p>
+              {i < 3 && (
+                <ArrowRight className="absolute -right-5 top-6 hidden h-5 w-5 text-slate-700 lg:block" />
+              )}
             </div>
           ))}
         </div>
       </section>
 
-      <footer className="border-t border-slate-800 py-8 text-center text-slate-500 text-sm">
-        SwimIQ — AI Swimming Coach. Built for hackers.
+      <footer className="border-t border-white/[0.06] py-10 text-center text-sm text-slate-600">
+        <div className="mx-auto flex max-w-7xl flex-col items-center gap-2 px-4">
+          <div className="flex items-center gap-2 text-slate-500">
+            <Waves className="h-4 w-4 text-cyan-500" />
+            <span className="font-semibold text-slate-400">SwimIQ</span>
+          </div>
+          <p>AI swimming coach — real-time form analysis for every lane.</p>
+        </div>
       </footer>
     </div>
   )
@@ -117,12 +130,12 @@ export default function Landing() {
 
 function FeatureCard({ icon, title, description }) {
   return (
-    <div className="text-center p-4">
-      <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mx-auto mb-4 text-cyan-400">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-left transition-colors hover:border-cyan-500/25">
+      <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl border border-cyan-500/20 bg-cyan-500/10 text-cyan-400">
         {icon}
       </div>
-      <h3 className="font-semibold text-white mb-2">{title}</h3>
-      <p className="text-sm text-slate-400 leading-relaxed">{description}</p>
+      <h3 className="mb-2 font-semibold text-white">{title}</h3>
+      <p className="text-sm leading-relaxed text-slate-500">{description}</p>
     </div>
   )
 }

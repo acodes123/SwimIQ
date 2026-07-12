@@ -20,6 +20,7 @@ export async function initMoveNet() {
 export async function detectPose(videoElement) {
   if (!model) await initMoveNet()
   if (!videoElement || videoElement.readyState < 2) return null
+  if (!videoElement.videoWidth || !videoElement.videoHeight) return null
 
   const inputSize = 256
 

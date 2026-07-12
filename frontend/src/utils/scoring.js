@@ -1,7 +1,15 @@
+const clamp = (v, min = 0, max = 100) => Math.max(min, Math.min(max, v))
+
 export function computeScore(snapshot) {
-  const symmetry = snapshot.symmetry ?? 50
-  const consistency = snapshot.consistency ?? 50
-  const extension = Math.round((snapshot.avgLeftExtension + snapshot.avgRightExtension) / 2)
+  if (!snapshot) {
+    return { total: 0, symmetry: 0, consistency: 0, extension: 0, strokeRate: 0, strokeCount: 0 }
+  }
+
+  const symmetry = clamp(Math.round(snapshot.symmetry ?? 50))
+  const consistency = clamp(Math.round(snapshot.consistency ?? 50))
+  const leftExt = snapshot.avgLeftExtension ?? 50
+  const rightExt = snapshot.avgRightExtension ?? 50
+  const extension = clamp(Math.round((leftExt + rightExt) / 2))
 
   const total = Math.round(
     symmetry * 0.30 +
@@ -10,7 +18,7 @@ export function computeScore(snapshot) {
   )
 
   return {
-    total: Math.max(0, Math.min(100, total)),
+    total: clamp(total),
     symmetry,
     consistency,
     extension,

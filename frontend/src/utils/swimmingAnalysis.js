@@ -78,6 +78,7 @@ export class StrokeAnalyzer {
     this.frameStrokeRecorded = false
     this.detectedStroke = STROKE.UNKNOWN
     this.strokeConfidence = 0
+    this.strokeVotes = {}
   }
 
   reset() {
@@ -94,6 +95,7 @@ export class StrokeAnalyzer {
     this.frameStrokeRecorded = false
     this.detectedStroke = STROKE.UNKNOWN
     this.strokeConfidence = 0
+    this.strokeVotes = {}
   }
 
   processFrame(pose) {
@@ -213,9 +215,35 @@ export class StrokeAnalyzer {
       confidence = Math.max(0, 20 - Math.abs(corr) * 30)
     }
 
-    if (confidence > this.strokeConfidence || stroke !== STROKE.UNKNOWN) {
-      this.detectedStroke = stroke
-      this.strokeConfidence = confidence
+    // Accumulate confidence-weighted votes per stroke so a few noisy frames
+    // can't flip the classification back and forth.
+    if (stroke !== STROKE.UNKNOWN && confidence > 0) {
+      this.strokeVotes[stroke] = (this.strokeVotes[stroke] || 0) + confidence
+    }
+
+    let bestStroke = STROKE.UNKNOWN
+    let bestVotes = 0
+    let totalVotes = 0
+    for (const [name, votes] of Object.entries(this.strokeVotes)) {
+      totalVotes += votes
+      if (votes > bestVotes) {
+        bestVotes = votes
+        bestStroke = name
+      }
+    }
+
+    if (bestStroke !== STROKE.UNKNOWN && totalVotes > 0) {
+      this.detectedStroke = bestStroke
+      // Confidence = how dominant the winning stroke is, scaled by the
+      // strength of its own frame-level confidences.
+      const dominance = bestVotes / totalVotes
+      const avgFrameConfidence = Math.min(100, bestVotes / Math.max(1, this.frameCount / 10))
+      this.strokeConfidence = Math.round(
+        Math.max(0, Math.min(100, dominance * 60 + avgFrameConfidence * 0.4))
+      )
+    } else {
+      this.detectedStroke = STROKE.UNKNOWN
+      this.strokeConfidence = Math.round(confidence)
     }
   }
 
