@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import SkeletonOverlay from './SkeletonOverlay'
 import ScorePanel from './ScorePanel'
 import TipsPanel from './TipsPanel'
+import ChatBot from './ChatBot'
 import { usePoseDetection } from '../hooks/usePoseDetection'
 import { useAudioFeedback } from '../hooks/useAudioFeedback'
 import { generateTips } from '../utils/tips'
@@ -203,6 +204,20 @@ export default function LiveDemo() {
           </div>
         </div>
       </div>
+
+      {isModelLoaded && snapshot && (
+        <ChatBot
+          context={{
+            strokeType: snapshot.strokeType,
+            strokeConfidence: snapshot.strokeConfidence,
+            symmetry: score?.symmetry,
+            extension: score?.extension,
+            rotation: snapshot.bodyRotation,
+            catchQuality: snapshot.catchQuality,
+            feedback: tips.map(t => t.text).join(' | ') || undefined,
+          }}
+        />
+      )}
     </div>
   )
 }

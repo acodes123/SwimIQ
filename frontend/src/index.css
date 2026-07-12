@@ -62,3 +62,48 @@ body {
 .animate-score-in { animation: score-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 .animate-slide-up { animation: slide-up 0.4s ease-out forwards; }
 .animate-wave { animation: wave 3s ease-in-out infinite; }
+
+/* Landing page: drifting aurora blobs behind the hero */
+@keyframes aurora-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(60px, -40px) scale(1.15); }
+  66% { transform: translate(-50px, 30px) scale(0.95); }
+}
+
+.animate-aurora { animation: aurora-drift 14s ease-in-out infinite; }
+.animate-aurora-slow { animation: aurora-drift 22s ease-in-out infinite reverse; }
+
+/* Landing page: scrolling water surface at the bottom of the hero */
+@keyframes wave-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.animate-wave-scroll { animation: wave-scroll 16s linear infinite; }
+.animate-wave-scroll-slow { animation: wave-scroll 26s linear infinite; }
+
+/* Landing page: shimmering gradient text for the headline accent */
+@keyframes shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.animate-shimmer {
+  background-size: 200% 200%;
+  animation: shimmer 6s ease-in-out infinite;
+}
+
+/* Chat panel open/close */
+@keyframes chat-in {
+  from { transform: translateY(16px) scale(0.97); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.animate-chat-in { animation: chat-in 0.25s cubic-bezier(0.34, 1.2, 0.64, 1) forwards; }
+
+@keyframes typing-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+.animate-typing-dot { animation: typing-dot 1.2s ease-in-out infinite; }

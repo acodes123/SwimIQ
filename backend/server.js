@@ -269,6 +269,96 @@ app.post('/api/analyze-stroke', async (req, res) => {
   }
 })
 
+function buildChatSystemPrompt(context = {}) {
+  const fmt = (v, suffix = '') => (v == null ? 'not measured' : `${v}${suffix}`)
+  return `You are SwimIQ, an expert competitive swimming coach AI. You just analyzed a swimmer's video and gave them feedback. Now they're asking follow-up questions about their form.
+
+The analysis context is:
+- Stroke type: ${context.strokeType || 'Unknown'}
+- Confidence: ${fmt(context.strokeConfidence, '%')}
+- Symmetry: ${fmt(context.symmetry, '%')}
+- Extension: ${fmt(context.extension, '%')}
+- Rotation: ${fmt(context.rotation, '%')}
+- Catch Quality (EVF): ${fmt(context.catchQuality, '%')}
+- Coaching tip given: ${context.feedback || 'none'}
+
+Rules:
+- Be a direct, blunt competitive coach — not encouraging fluff
+- Reference their specific scores and metrics when giving advice
+- If they ask about something not visible in the analysis, say so honestly
+- Keep responses concise (2-3 sentences max) unless they ask for detail
+- Use proper swimming terminology (EVF, catch phase, pull-through, distance per stroke, stroke rate)
+- If they ask "how do I fix X", give one specific drill or cue`
+}
+
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { message, history, context } = req.body || {}
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({ error: 'No message provided' })
+    }
+    if (!GROQ_KEY) {
+      return res.status(500).json({ error: 'GROQ_API_KEY not set in .env' })
+    }
+
+    const messages = [{ role: 'system', content: buildChatSystemPrompt(context) }]
+
+    if (Array.isArray(history)) {
+      for (const m of history.slice(-20)) {
+        if (m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string') {
+          messages.push({ role: m.role, content: m.content.slice(0, 2000) })
+        }
+      }
+    }
+    messages.push({ role: 'user', content: message.trim().slice(0, 2000) })
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000)
+    let response
+    try {
+      response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          messages,
+          max_tokens: 400,
+          temperature: 0.6,
+        }),
+        signal: controller.signal,
+      })
+    } finally {
+      clearTimeout(timeout)
+    }
+
+    let data
+    try {
+      data = await response.json()
+    } catch {
+      return res.status(502).json({ error: `Groq API returned invalid response (HTTP ${response.status})` })
+    }
+
+    if (!response.ok || data.error) {
+      console.error('Groq chat error:', data.error || response.status)
+      return res.status(502).json({ error: data.error?.message || `Groq API error (HTTP ${response.status})` })
+    }
+
+    const reply = data.choices?.[0]?.message?.content?.trim()
+    if (!reply) {
+      return res.status(502).json({ error: 'Groq API returned an empty reply' })
+    }
+
+    res.json({ reply })
+  } catch (err) {
+    console.error('Chat error:', err)
+    const message = err.name === 'AbortError' ? 'Coach is taking too long to respond — try again.' : err.message
+    res.status(500).json({ error: message })
+  }
+})
+
 const PORT = 3002
 app.listen(PORT, () => {
   console.log(`SwimIQ backend running on port ${PORT}`)

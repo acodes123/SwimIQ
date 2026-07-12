@@ -1,4 +1,4 @@
-import { KEYPOINT_MAP } from './movenet'
+import { KEYPOINT_MAP } from './keypoints.js'
 
 function getKp(pose, name) {
   const idx = KEYPOINT_MAP[name]
@@ -63,22 +63,14 @@ function stddev(arr) {
   return Math.sqrt(variance)
 }
 
+// Stroke cycle duration bounds (ms). Competitive stroke cycles run roughly
+// 1-4s per arm; anything outside this is noise or a detection gap.
+const MIN_STROKE_MS = 400
+const MAX_STROKE_MS = 8000
+
 export class StrokeAnalyzer {
   constructor() {
-    this.wristHistory = { left: [], right: [] }
-    this.shoulderHistory = []
-    this.hipHistory = []
-    this.headHistory = []
-    this.strokes = []
-    this.currentPhase = { left: PHASE.UNKNOWN, right: PHASE.UNKNOWN }
-    this.prevWristY = { left: null, right: null }
-    this.lastStrokeTime = { left: null, right: null }
-    this.allArmExtensions = { left: [], right: [] }
-    this.frameCount = 0
-    this.frameStrokeRecorded = false
-    this.detectedStroke = STROKE.UNKNOWN
-    this.strokeConfidence = 0
-    this.strokeVotes = {}
+    this.reset()
   }
 
   reset() {
@@ -88,20 +80,27 @@ export class StrokeAnalyzer {
     this.headHistory = []
     this.strokes = []
     this.currentPhase = { left: PHASE.UNKNOWN, right: PHASE.UNKNOWN }
-    this.prevWristY = { left: null, right: null }
     this.lastStrokeTime = { left: null, right: null }
+    // Peak/trough trackers for stroke cycle detection: dir is +1 while the
+    // wrist moves down-screen (pull), -1 while it moves up (recovery),
+    // 0 before a direction is established.
+    this.turn = {
+      left: { dir: 0, refY: null, extremeY: null, cycleTopY: null },
+      right: { dir: 0, refY: null, extremeY: null, cycleTopY: null },
+    }
     this.allArmExtensions = { left: [], right: [] }
     this.frameCount = 0
-    this.frameStrokeRecorded = false
     this.detectedStroke = STROKE.UNKNOWN
     this.strokeConfidence = 0
     this.strokeVotes = {}
   }
 
-  processFrame(pose) {
+  // `timestamp` is the frame time in ms. For live camera feeds it defaults to
+  // wall-clock time; for uploaded videos pass `video.currentTime * 1000` so
+  // stroke durations and rates reflect video time, not processing speed.
+  processFrame(pose, timestamp) {
     this.frameCount++
-    const now = Date.now()
-    this.frameStrokeRecorded = false
+    const now = Number.isFinite(timestamp) ? timestamp : Date.now()
 
     const leftWrist = getKp(pose, 'leftWrist')
     const rightWrist = getKp(pose, 'rightWrist')
@@ -247,47 +246,79 @@ export class StrokeAnalyzer {
     }
   }
 
+  // Stroke cycles are detected as peak/trough turns of the wrist Y series
+  // with adaptive hysteresis: a direction change only registers once the
+  // wrist reverses by ~20% of its recent movement range. This works for both
+  // 30fps live feeds and videos sampled at coarse intervals (e.g. 0.5s),
+  // where fixed pixel/velocity thresholds fail.
   detectPhase(side, wrist, now) {
     if (!hasScore(wrist)) return
 
     const history = this.wristHistory[side]
-    if (history.length < 5) return
+    if (history.length < 2) return
 
-    const recent = history.slice(-5)
-    const avgY = recent.reduce((s, h) => s + h.y, 0) / recent.length
+    const recentYs = history.slice(-40).map(h => h.y)
+    const range = Math.max(...recentYs) - Math.min(...recentYs)
+    const threshold = Math.max(4, range * 0.2)
 
-    const prevAvgY = this.prevWristY[side]
-    this.prevWristY[side] = avgY
+    const y = wrist.y
+    const t = this.turn[side]
 
-    if (prevAvgY === null) return
-
-    const yVelocity = avgY - prevAvgY
-    const prevPhase = this.currentPhase[side]
-
-    if (prevPhase === PHASE.RECOVERY || prevPhase === PHASE.UNKNOWN) {
-      if (yVelocity > 0.5 && avgY > (prevAvgY + 1)) {
-        this.currentPhase[side] = PHASE.ENTRY
-
-        if (this.lastStrokeTime[side] !== null && !this.frameStrokeRecorded) {
-          const strokeDuration = now - this.lastStrokeTime[side]
-          if (strokeDuration > 300 && strokeDuration < 5000) {
-            this.strokes.push({
-              side,
-              time: now,
-              duration: strokeDuration,
-            })
-            if (this.strokes.length > 50) this.strokes.shift()
-            this.frameStrokeRecorded = true
-          }
-        }
-        this.lastStrokeTime[side] = now
+    if (t.dir === 0) {
+      if (t.refY === null) {
+        t.refY = y
+        return
       }
-    } else if (prevPhase === PHASE.ENTRY || prevPhase === PHASE.PULL) {
-      if (yVelocity < -0.5) {
-        this.currentPhase[side] = PHASE.RECOVERY
-      } else if (yVelocity > 0.5) {
+      if (y > t.refY + threshold) {
+        t.dir = 1
+        t.extremeY = y
+        t.cycleTopY = t.refY
         this.currentPhase[side] = PHASE.PULL
+      } else if (y < t.refY - threshold) {
+        t.dir = -1
+        t.extremeY = y
+        this.currentPhase[side] = PHASE.RECOVERY
       }
+      return
+    }
+
+    if (t.dir === 1) {
+      // Wrist moving down-screen (pulling).
+      if (y >= t.extremeY) {
+        t.extremeY = y
+        if (this.currentPhase[side] === PHASE.ENTRY && t.cycleTopY !== null && y > t.cycleTopY + threshold * 2) {
+          this.currentPhase[side] = PHASE.PULL
+        }
+      } else if (t.extremeY - y > threshold) {
+        // Bottom of the pull reached — recovery begins.
+        t.dir = -1
+        t.extremeY = y
+        this.currentPhase[side] = PHASE.RECOVERY
+      }
+    } else {
+      // Wrist moving up-screen (recovering).
+      if (y <= t.extremeY) {
+        t.extremeY = y
+      } else if (y - t.extremeY > threshold) {
+        // Top of the recovery reached — a new stroke cycle starts.
+        t.dir = 1
+        t.cycleTopY = t.extremeY
+        t.extremeY = y
+        this.currentPhase[side] = PHASE.ENTRY
+        this.recordStroke(side, now)
+      }
+    }
+  }
+
+  recordStroke(side, now) {
+    const last = this.lastStrokeTime[side]
+    this.lastStrokeTime[side] = now
+    if (last === null) return
+
+    const duration = now - last
+    if (duration >= MIN_STROKE_MS && duration <= MAX_STROKE_MS) {
+      this.strokes.push({ side, time: now, duration })
+      if (this.strokes.length > 50) this.strokes.shift()
     }
   }
 

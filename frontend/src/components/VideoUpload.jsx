@@ -3,6 +3,7 @@ import { Link as RouterLink } from 'react-router-dom'
 import SkeletonOverlay from './SkeletonOverlay'
 import ScorePanel from './ScorePanel'
 import TipsPanel from './TipsPanel'
+import ChatBot from './ChatBot'
 import { initMoveNet, detectPose } from '../utils/movenet'
 import { StrokeAnalyzer } from '../utils/swimmingAnalysis'
 import { computeScore } from '../utils/scoring'
@@ -152,7 +153,9 @@ export default function VideoUpload() {
           const pose = await detectPose(video)
           if (pose) {
             poseFrames++
-            const snap = analyzer.processFrame(pose)
+            // Pass video time so stroke durations/rates reflect the video,
+            // not how fast frames were processed.
+            const snap = analyzer.processFrame(pose, video.currentTime * 1000)
             lastPoseRef.current = pose
             setCurrentPose(pose)
             setSnapshot(snap)
@@ -401,6 +404,20 @@ export default function VideoUpload() {
           </div>
         </div>
       </div>
+
+      {isProcessed && finalScore && (
+        <ChatBot
+          context={{
+            strokeType: snapshot?.strokeType,
+            strokeConfidence: snapshot?.strokeConfidence,
+            symmetry: finalScore.symmetry,
+            extension: finalScore.extension,
+            rotation: snapshot?.bodyRotation,
+            catchQuality: snapshot?.catchQuality,
+            feedback: tips.map(t => t.text).join(' | ') || undefined,
+          }}
+        />
+      )}
     </div>
   )
 }
